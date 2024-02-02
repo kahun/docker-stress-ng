@@ -1,0 +1,49 @@
+FROM debian:bookworm-slim as builder
+
+WORKDIR /opt
+
+# Install stress-ng build dependencies
+# https://github.com/ColinIanKing/stress-ng#building-stress-ng
+RUN apt-get update && apt-get install -yq --no-install-recommends \
+    make \
+    gcc \
+    g++ \
+    libacl1-dev \
+    libaio-dev \
+    libapparmor-dev \
+    libatomic1 \
+    libattr1-dev \
+    libbsd-dev \
+    libcap-dev \
+    libeigen3-dev \
+    libgbm-dev \
+    libgcrypt-dev \
+    libglvnd-dev \
+    libipsec-mb-dev \
+    libjpeg-dev \
+    libjudy-dev \
+    libkeyutils-dev \
+    libkmod-dev \
+    libmd-dev \
+    libmpfr-dev \
+    libsctp-dev \
+    libxxhash-dev \
+    zlib1g-dev
+
+# Download stress-ng source code
+ENV STRESS_NG_VERSION ${STRESS_NG_VERSION:-0.17.05}
+ADD https://github.com/ColinIanKing/stress-ng/archive/V${STRESS_NG_VERSION}.tar.gz .
+RUN tar -zxf V${STRESS_NG_VERSION}.tar.gz && mv stress-ng-${STRESS_NG_VERSION} stress-ng
+
+WORKDIR /opt/stress-ng
+
+# Build a static binary
+RUN STATIC=1 make
+
+# Final image
+FROM debian:bookworm-slim
+
+COPY --from=builder /opt/stress-ng/stress-ng /usr/local/bin/stress-ng
+
+ENTRYPOINT ["stress-ng"]
+
